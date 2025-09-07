@@ -1,0 +1,20 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "env": {
+    "NEXTAUTH_URL": "@nextauth_url",
+    "NEXTAUTH_SECRET": "@nextauth_secret",
+    "DATABASE_URL": "@database_url",
+    "GOOGLE_CLIENT_ID": "@google_client_id",
+    "GOOGLE_CLIENT_SECRET": "@google_client_secret",
+    "LINKEDIN_CLIENT_ID": "@linkedin_client_id",
+    "LINKEDIN_CLIENT_SECRET": "@linkedin_client_secret",
+    "FACEBOOK_CLIENT_ID": "@facebook_client_id",
+    "FACEBOOK_CLIENT_SECRET": "@facebook_client_secret",
+    "RECALL_API_KEY": "@recall_api_key",
+    "OPENAI_API_KEY": "@openai_api_key"
+  }
+}

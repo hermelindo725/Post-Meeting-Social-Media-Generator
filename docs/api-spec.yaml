@@ -1,0 +1,789 @@
+openapi: 3.0.3
+info:
+  title: Post-Meeting Social Media Generator API
+  description: |
+    Enterprise-grade API for generating social media content from meeting transcripts.
+    
+    ## Features
+    - Google Calendar integration
+    - Recall.ai meeting recording
+    - AI-powered content generation
+    - Social media posting
+    - Advanced analytics
+    - Enterprise integrations
+    
+    ## Authentication
+    All API endpoints require authentication via NextAuth.js session tokens.
+    
+    ## Rate Limiting
+    API requests are rate limited per user:
+    - 1000 requests per hour for authenticated users
+    - 100 requests per hour for unauthenticated users
+    
+    ## Error Handling
+    All errors follow a consistent format with appropriate HTTP status codes.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@postmeeting.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.postmeeting.com/v1
+    description: Production server
+  - url: https://staging-api.postmeeting.com/v1
+    description: Staging server
+  - url: http://localhost:3000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /meetings:
+    get:
+      summary: List meetings
+      description: Retrieve a list of meetings for the authenticated user
+      tags:
+        - Meetings
+      parameters:
+        - name: status
+          in: query
+          description: Filter by meeting status
+          schema:
+            type: string
+            enum: [scheduled, completed, failed]
+        - name: limit
+          in: query
+          description: Maximum number of meetings to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of meetings to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of meetings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meetings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Meeting'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create meeting
+      description: Create a new meeting record
+      tags:
+        - Meetings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingRequest'
+      responses:
+        '201':
+          description: Meeting created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /meetings/{id}:
+    get:
+      summary: Get meeting details
+      description: Retrieve detailed information about a specific meeting
+      tags:
+        - Meetings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Meeting ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meeting details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update meeting
+      description: Update meeting information
+      tags:
+        - Meetings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Meeting ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingRequest'
+      responses:
+        '200':
+          description: Meeting updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete meeting
+      description: Delete a meeting and all associated data
+      tags:
+        - Meetings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Meeting ID
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Meeting deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /meetings/{id}/transcript:
+    get:
+      summary: Get meeting transcript
+      description: Retrieve the transcript for a specific meeting
+      tags:
+        - Meetings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Meeting ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meeting transcript
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transcript:
+                    type: string
+                    description: The meeting transcript text
+                  confidence:
+                    type: number
+                    description: Transcription confidence score (0-1)
+                  language:
+                    type: string
+                    description: Detected language
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /content/generate:
+    post:
+      summary: Generate content
+      description: Generate social media content from meeting transcript
+      tags:
+        - Content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateContentRequest'
+      responses:
+        '200':
+          description: Content generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratedContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /content/{id}:
+    get:
+      summary: Get content details
+      description: Retrieve details about generated content
+      tags:
+        - Content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Content ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Content details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Post content to social media
+      description: Post generated content to specified social media platform
+      tags:
+        - Content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Content ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                platform:
+                  type: string
+                  enum: [linkedin, facebook, twitter]
+                scheduledAt:
+                  type: string
+                  format: date-time
+                  description: Optional scheduled posting time
+      responses:
+        '200':
+          description: Content posted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                    description: Social media post ID
+                  url:
+                    type: string
+                    description: URL to the posted content
+                  status:
+                    type: string
+                    enum: [posted, scheduled, failed]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analytics/dashboard:
+    get:
+      summary: Get analytics dashboard data
+      description: Retrieve comprehensive analytics data for the dashboard
+      tags:
+        - Analytics
+      parameters:
+        - name: range
+          in: query
+          description: Time range for analytics
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+        - name: userId
+          in: query
+          description: Filter by specific user (admin only)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Analytics dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsDashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /integrations:
+    get:
+      summary: List integrations
+      description: Get list of configured integrations
+      tags:
+        - Integrations
+      responses:
+        '200':
+          description: List of integrations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  integrations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Integration'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create integration
+      description: Create a new integration
+      tags:
+        - Integrations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIntegrationRequest'
+      responses:
+        '201':
+          description: Integration created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /health:
+    get:
+      summary: Health check
+      description: Check API health status
+      tags:
+        - System
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: API is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Meeting:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique meeting identifier
+        title:
+          type: string
+          description: Meeting title
+        startTime:
+          type: string
+          format: date-time
+          description: Meeting start time
+        endTime:
+          type: string
+          format: date-time
+          description: Meeting end time
+        platform:
+          type: string
+          enum: [zoom, teams, google-meet]
+          description: Meeting platform
+        meetingUrl:
+          type: string
+          format: uri
+          description: Meeting URL
+        status:
+          type: string
+          enum: [scheduled, completed, failed]
+          description: Meeting status
+        attendees:
+          type: array
+          items:
+            type: string
+          description: List of attendee emails
+        transcript:
+          type: string
+          description: Meeting transcript
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateMeetingRequest:
+      type: object
+      required:
+        - title
+        - startTime
+        - endTime
+        - platform
+      properties:
+        title:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        platform:
+          type: string
+          enum: [zoom, teams, google-meet]
+        meetingUrl:
+          type: string
+          format: uri
+        attendees:
+          type: array
+          items:
+            type: string
+
+    UpdateMeetingRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, completed, failed]
+        transcript:
+          type: string
+
+    Content:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        platform:
+          type: string
+          enum: [linkedin, facebook, twitter]
+        status:
+          type: string
+          enum: [draft, posted, scheduled, failed]
+        meetingId:
+          type: string
+        automationId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GenerateContentRequest:
+      type: object
+      required:
+        - meetingId
+        - platform
+        - automationId
+      properties:
+        meetingId:
+          type: string
+        platform:
+          type: string
+          enum: [linkedin, facebook, twitter]
+        automationId:
+          type: string
+        customInstructions:
+          type: string
+        brandVoice:
+          type: string
+        targetAudience:
+          type: string
+
+    GeneratedContent:
+      type: object
+      properties:
+        content:
+          type: string
+        analysis:
+          $ref: '#/components/schemas/ContentAnalysis'
+        alternatives:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          properties:
+            generationTime:
+              type: integer
+            model:
+              type: string
+            confidence:
+              type: number
+
+    ContentAnalysis:
+      type: object
+      properties:
+        sentiment:
+          type: string
+          enum: [positive, neutral, negative]
+        engagement:
+          type: string
+          enum: [high, medium, low]
+        readability:
+          type: number
+          minimum: 0
+          maximum: 100
+        keywords:
+          type: array
+          items:
+            type: string
+        hashtags:
+          type: array
+          items:
+            type: string
+        estimatedReach:
+          type: number
+
+    AnalyticsDashboard:
+      type: object
+      properties:
+        overview:
+          type: object
+          properties:
+            totalMeetings:
+              type: integer
+            totalContent:
+              type: integer
+            totalEngagement:
+              type: integer
+            avgMeetingDuration:
+              type: number
+            productivityScore:
+              type: number
+        meetingMetrics:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              meetings:
+                type: integer
+              duration:
+                type: number
+              satisfaction:
+                type: number
+        contentMetrics:
+          type: array
+          items:
+            type: object
+            properties:
+              platform:
+                type: string
+              posts:
+                type: integer
+              engagement:
+                type: number
+              reach:
+                type: number
+
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [slack, teams, salesforce, hubspot, zapier]
+        status:
+          type: string
+          enum: [active, inactive, error]
+        config:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateIntegrationRequest:
+      type: object
+      required:
+        - name
+        - type
+        - config
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [slack, teams, salesforce, hubspot, zapier]
+        config:
+          type: object
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        checks:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                status:
+                  type: string
+                latency:
+                  type: number
+            externalAPIs:
+              type: object
+        timestamp:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Meetings
+    description: Meeting management operations
+  - name: Content
+    description: Content generation and posting
+  - name: Analytics
+    description: Analytics and reporting
+  - name: Integrations
+    description: Third-party integrations
+  - name: System
+    description: System health and monitoring
